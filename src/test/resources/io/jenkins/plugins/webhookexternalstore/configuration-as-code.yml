@@ -1,0 +1,3 @@
+security:
+  webhookSecretStore:
+    token: "a very insecure token"

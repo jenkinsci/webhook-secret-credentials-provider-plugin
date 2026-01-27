@@ -1,0 +1,8 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:section title="Webhook Secret Credentials Provider">
+    <f:entry title="Bearer Token" field="token" description="Token for authenticating webhook requests. This token is mandatory for security.">
+      <f:password/>
+    </f:entry>
+  </f:section>
+</j:jelly>

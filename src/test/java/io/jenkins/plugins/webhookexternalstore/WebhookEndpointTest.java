@@ -1,0 +1,118 @@
+package io.jenkins.plugins.webhookexternalstore;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
+import hudson.util.Secret;
+import java.util.Collections;
+import java.util.List;
+import net.sf.json.JSONObject;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+@WithJenkins
+class WebhookEndpointTest {
+
+    private static final String UPDATE_PATH = "webhook-credentials/update";
+
+    @Test
+    void shouldRaise401WithoutToken(JenkinsRule jenkins) throws Exception {
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            assertEquals(401, client.postJSON(UPDATE_PATH, new JSONObject()).getStatusCode());
+        }
+    }
+
+    @Test
+    void shouldRaise401WithInvalidToken(JenkinsRule jenkins) throws Exception {
+        // Setup config
+        WebhookConfiguration config = WebhookConfiguration.getInstance();
+        config.setToken(Secret.fromString("test-bearer-token-123"));
+        config.save();
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.addRequestHeader("Authorization", "Bearer Invalid");
+            assertEquals(401, client.postJSON(UPDATE_PATH, new JSONObject()).getStatusCode());
+        }
+    }
+
+    @Test
+    void shouldCreateTokenCredentials(JenkinsRule jenkins) throws Exception {
+
+        // Setup config
+        WebhookConfiguration config = WebhookConfiguration.getInstance();
+        config.setToken(Secret.fromString("test-bearer-token-123"));
+        config.save();
+
+        // Username password credentials
+        String payload = """
+                {
+                    "description": "An username password credentials",
+                    "id": "username-password-credentials",
+                    "secret": {
+                        "token": "theSecretTokenValue"
+                    },
+                    "type": "secretText"
+                }
+                """;
+
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.addRequestHeader("Authorization", "Bearer test-bearer-token-123");
+            JenkinsRule.JSONWebResponse response = client.postJSON(UPDATE_PATH, JSONObject.fromObject(payload));
+
+            // Assert successful response
+            assertEquals(200, response.getStatusCode());
+
+            // Verify the UsernamePasswordCredentials was created and stored
+            List<StringCredentials> stringCredentials = CredentialsProvider.lookupCredentialsInItemGroup(
+                    StringCredentials.class, jenkins.getInstance(), null, Collections.emptyList());
+
+            assertEquals(1, stringCredentials.size());
+            StringCredentials createdCredentials = stringCredentials.get(0);
+            assertEquals("username-password-credentials", createdCredentials.getId());
+            assertEquals("An username password credentials", createdCredentials.getDescription());
+            assertEquals("theSecretTokenValue", createdCredentials.getSecret().getPlainText());
+        }
+    }
+
+    @Test
+    void shouldCreateUserNamePasswordCredentials(JenkinsRule jenkins) throws Exception {
+
+        // Setup config
+        WebhookConfiguration config = WebhookConfiguration.getInstance();
+        config.setToken(Secret.fromString("test-bearer-token-123"));
+        config.save();
+
+        // Username password credentials
+        String payload = """
+                {
+                    "description": "An username password credentials",
+                    "id": "username-password-credentials",
+                    "secret": {
+                        "password": "password123",
+                        "username": "userName"
+                    },
+                    "type": "usernamePassword"
+                }
+                """;
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.addRequestHeader("Authorization", "Bearer test-bearer-token-123");
+            JenkinsRule.JSONWebResponse response = client.postJSON(UPDATE_PATH, JSONObject.fromObject(payload));
+
+            // Assert successful response
+            assertEquals(200, response.getStatusCode());
+
+            // Verify the UsernamePasswordCredentials was created and stored
+            List<UsernamePasswordCredentialsImpl> stringCredentials = CredentialsProvider.lookupCredentialsInItemGroup(
+                    UsernamePasswordCredentialsImpl.class, jenkins.getInstance(), null, Collections.emptyList());
+
+            assertEquals(1, stringCredentials.size());
+            UsernamePasswordCredentialsImpl createdCredentials = stringCredentials.get(0);
+            assertEquals("username-password-credentials", createdCredentials.getId());
+            assertEquals("An username password credentials", createdCredentials.getDescription());
+            assertEquals("userName", createdCredentials.getUsername());
+            assertEquals("password123", createdCredentials.getPassword().getPlainText());
+        }
+    }
+}
