@@ -45,7 +45,7 @@ public class WebhookEndpoint implements UnprotectedRootAction {
     }
 
     @POST
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "lgtm[jenkins/no-permission-check]"}) // API protected by Bearer token
     public void doUpdate(StaplerRequest2 request, StaplerResponse2 response) throws IOException {
         try {
 
