@@ -81,6 +81,20 @@ http POST :8080/jenkins/webhook-credentials/update \
   "secret[password]=password123"
 ```
 
+#### SSHUserPrivateKey (sshPrivateKey)
+
+```bashbash
+http POST :8080/jenkins/webhook-credentials/update \
+  "Authorization:Bearer <your-token>" \
+  id=ssh-private-key-credentials \
+  description="An SSH private key credentials" \
+  type=basicSSHUserPrivateKey \
+  "secret[username]=sshUser" \
+  "secret[passphrase]=optionalPassphrase" \
+  "secret[privateKey]=-----BEGIN OPENSSH PRIVATE KEY-----
+  ...-----END OPENSSH PRIVATE KEY-----"
+```
+
 ## Jenkins configuration as code
 
 ```yaml
