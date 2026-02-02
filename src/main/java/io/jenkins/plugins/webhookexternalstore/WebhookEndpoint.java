@@ -89,8 +89,8 @@ public class WebhookEndpoint implements UnprotectedRootAction {
             return WebhookPayload.fromJSON(json);
 
         } catch (IOException e) {
-            LOG.error("Error parsing webhook JSON payload: {}", e.getMessage(), e);
-            throw new CredentialsConvertionException("Error parsing webhook JSON payload: " + e.getMessage(), e);
+            LOG.error("Error parsing webhook JSON payload");
+            throw new CredentialsConvertionException("Error parsing webhook JSON payload");
         }
     }
 

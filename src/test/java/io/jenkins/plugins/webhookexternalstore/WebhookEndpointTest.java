@@ -2,6 +2,7 @@ package io.jenkins.plugins.webhookexternalstore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.util.Secret;
@@ -46,6 +47,7 @@ class WebhookEndpointTest {
         config.save();
 
         // Username password credentials
+        // language=JSON
         String payload = """
                 {
                     "description": "An username password credentials",
@@ -85,6 +87,7 @@ class WebhookEndpointTest {
         config.save();
 
         // Username password credentials
+        // language=JSON
         String payload = """
                 {
                     "description": "An username password credentials",
@@ -113,6 +116,64 @@ class WebhookEndpointTest {
             assertEquals("An username password credentials", createdCredentials.getDescription());
             assertEquals("userName", createdCredentials.getUsername());
             assertEquals("password123", createdCredentials.getPassword().getPlainText());
+        }
+    }
+
+    @Test
+    void shouldCreateBasicSSHPrivateKeyCredentials(JenkinsRule jenkins) throws Exception {
+        // Setup config
+        WebhookConfiguration config = WebhookConfiguration.getInstance();
+        config.setToken(Secret.fromString("test-bearer-token-123"));
+        config.save();
+
+        // Basic SSH User Private Key credentials
+        // language=JSON
+        String payload = """
+        {
+            "description": "An SSH private key credentials",
+            "id": "ssh-private-key-credentials",
+            "secret": {
+                "username": "sshUser",
+                "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\\n\
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\\n\
+QyNTUxOQAAACD6v4+ISS8l9XSyVuod+3GTdbO/VYFTuUB3MdbHvPS/TwAAAJC2EVUKthFV\\n\
+CgAAAAtzc2gtZWQyNTUxOQAAACD6v4+ISS8l9XSyVuod+3GTdbO/VYFTuUB3MdbHvPS/Tw\\n\
+AAAEDDaBwB5sI/2gDPpGtYeuKwmVzxmKAZvibatpcopOU+zPq/j4hJLyX1dLJW6h37cZN1\\n\
+s79VgVO5QHcx1se89L9PAAAADHZhbGRATkIyNzc2NAE=\\n\
+-----END OPENSSH PRIVATE KEY-----",
+                "passphrase": "sshPassphrase"
+            },
+            "type": "basicSSHUserPrivateKey"
+        }
+        """;
+
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.addRequestHeader("Authorization", "Bearer test-bearer-token-123");
+            JenkinsRule.JSONWebResponse response = client.postJSON(UPDATE_PATH, JSONObject.fromObject(payload));
+
+            // Assert successful response
+            assertEquals(200, response.getStatusCode());
+
+            // Verify the BasicSSHUserPrivateKey was created and stored
+            List<BasicSSHUserPrivateKey> sshCredentials = CredentialsProvider.lookupCredentialsInItemGroup(
+                    BasicSSHUserPrivateKey.class, jenkins.getInstance(), null, Collections.emptyList());
+            assertEquals(1, sshCredentials.size());
+            BasicSSHUserPrivateKey createdCredentials = sshCredentials.get(0);
+            assertEquals("ssh-private-key-credentials", createdCredentials.getId());
+            assertEquals("An SSH private key credentials", createdCredentials.getDescription());
+            assertEquals("sshUser", createdCredentials.getUsername());
+            assertEquals(
+                    """
+                            -----BEGIN OPENSSH PRIVATE KEY-----
+                            b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+                            QyNTUxOQAAACD6v4+ISS8l9XSyVuod+3GTdbO/VYFTuUB3MdbHvPS/TwAAAJC2EVUKthFV
+                            CgAAAAtzc2gtZWQyNTUxOQAAACD6v4+ISS8l9XSyVuod+3GTdbO/VYFTuUB3MdbHvPS/Tw
+                            AAAEDDaBwB5sI/2gDPpGtYeuKwmVzxmKAZvibatpcopOU+zPq/j4hJLyX1dLJW6h37cZN1
+                            s79VgVO5QHcx1se89L9PAAAADHZhbGRATkIyNzc2NAE=
+                            -----END OPENSSH PRIVATE KEY-----
+                            """,
+                    createdCredentials.getPrivateKeySource().getPrivateKeys().get(0));
+            assertEquals("sshPassphrase", createdCredentials.getPassphrase().getPlainText());
         }
     }
 }

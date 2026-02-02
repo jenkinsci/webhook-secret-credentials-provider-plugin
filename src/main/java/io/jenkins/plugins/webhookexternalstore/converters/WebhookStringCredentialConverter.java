@@ -2,17 +2,17 @@ package io.jenkins.plugins.webhookexternalstore.converters;
 
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.common.IdCredentials;
-import hudson.Extension;
 import hudson.util.Secret;
 import io.jenkins.plugins.webhookexternalstore.WebhookPayload;
 import io.jenkins.plugins.webhookexternalstore.exceptions.CredentialsConvertionException;
 import java.util.logging.Logger;
 import org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl;
+import org.jenkinsci.plugins.variant.OptionalExtension;
 
 /**
  * Converter for string/token credentials using "secretText" type and {@link StringCredentialsImpl}.
  */
-@Extension
+@OptionalExtension(requirePlugins = {"plain-credentials"})
 @SuppressWarnings("unused")
 public class WebhookStringCredentialConverter extends WebhookToCredentialConverter {
 
