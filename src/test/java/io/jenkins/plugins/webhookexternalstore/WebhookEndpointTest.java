@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.List;
 import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.jenkinsci.plugins.plaincredentials.impl.FileCredentialsImpl;
 import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
@@ -174,6 +175,48 @@ s79VgVO5QHcx1se89L9PAAAADHZhbGRATkIyNzc2NAE=\\n\
                             """,
                     createdCredentials.getPrivateKeySource().getPrivateKeys().get(0));
             assertEquals("sshPassphrase", createdCredentials.getPassphrase().getPlainText());
+        }
+    }
+
+    @Test
+    void shouldCreateSecretFileCredentials(JenkinsRule jenkins) throws Exception {
+        // Setup config
+        WebhookConfiguration config = WebhookConfiguration.getInstance();
+        config.setToken(Secret.fromString("test-bearer-token-123"));
+        config.save();
+
+        // Secret File credentials
+        // language=JSON
+        String payload = """
+        {
+            "description": "A secret file credentials",
+            "id": "secret-file-credentials",
+            "secret": {
+                "filename": "foo.txt",
+                "data": "Zm9vLWJhci10ZXN0"
+            },
+            "type": "secretFile"
+        }
+        """;
+
+        try (JenkinsRule.WebClient client = jenkins.createWebClient()) {
+            client.addRequestHeader("Authorization", "Bearer test-bearer-token-123");
+            JenkinsRule.JSONWebResponse response = client.postJSON(UPDATE_PATH, JSONObject.fromObject(payload));
+
+            // Assert successful response
+            assertEquals(200, response.getStatusCode());
+
+            // Verify the FileCredentialsImpl was created and stored
+            List<FileCredentialsImpl> fileCredentials = CredentialsProvider.lookupCredentialsInItemGroup(
+                    FileCredentialsImpl.class, jenkins.getInstance(), null, Collections.emptyList());
+            assertEquals(1, fileCredentials.size());
+            FileCredentialsImpl createdCredentials = fileCredentials.get(0);
+            assertEquals("secret-file-credentials", createdCredentials.getId());
+            assertEquals("A secret file credentials", createdCredentials.getDescription());
+            assertEquals("foo.txt", createdCredentials.getFileName());
+            assertEquals(
+                    "foo-bar-test",
+                    new String(createdCredentials.getSecretBytes().getPlainData()));
         }
     }
 }
