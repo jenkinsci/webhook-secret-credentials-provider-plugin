@@ -83,7 +83,7 @@ http POST :8080/jenkins/webhook-credentials/update \
 
 #### SSHUserPrivateKey (sshPrivateKey)
 
-```bashbash
+```bash
 http POST :8080/jenkins/webhook-credentials/update \
   "Authorization:Bearer <your-token>" \
   id=ssh-private-key-credentials \
@@ -93,6 +93,20 @@ http POST :8080/jenkins/webhook-credentials/update \
   "secret[passphrase]=optionalPassphrase" \
   "secret[privateKey]=-----BEGIN OPENSSH PRIVATE KEY-----
   ...-----END OPENSSH PRIVATE KEY-----"
+```
+
+#### FileCredentialsImpl (secretFile)
+
+data must be base64 encoded
+
+```bash
+http POST :8080/jenkins/webhook-credentials/update \
+  "Authorization:Bearer <your-token>" \
+  id=secret-file-credentials \
+  description="An secret file" \
+  type=secretFile \
+  "secret[filename]=foo.txt" \
+  "secret[data]=Zm9vLWJhci10ZXN0"
 ```
 
 ## Jenkins configuration as code
