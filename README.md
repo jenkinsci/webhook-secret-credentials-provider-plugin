@@ -4,11 +4,6 @@ A Jenkins plugin that allows external systems to provide global credentials to J
 
 This enables dynamic credential update from external systems (that can execute webhooks) or infrastructure automation tools when pull model is not possible.
 
-> [!WARNING]  
-> Secret are stored in memory and NOT persisted to disk. Make sure your system executing webhook update secrets are regular.
-> As a result, it does not support High Availability (HA) or clustered Jenkins environments (such as CloudBees CI HA).
-> Future improvement will include persistence if such limitation is a blocker in the future.
-
 If you are not clear about the next use case, you probably want to take a look at following plugins instead
  - [Kubernetes Credentials Provider Plugin](https://plugins.jenkins.io/kubernetes-credentials-provider/) to fetch credentials from Kubernetes Secrets
  - [Vault Credentials Provider Plugin](https://plugins.jenkins.io/hashicorp-vault-plugin/) to fetch credentials from HashiCorp Vault

@@ -11,10 +11,9 @@ import hudson.model.ModelObject;
 import hudson.security.ACL;
 import io.jenkins.plugins.webhookexternalstore.converters.WebhookToCredentialConverter;
 import io.jenkins.plugins.webhookexternalstore.exceptions.CredentialsConvertionException;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import jenkins.model.Jenkins;
 import org.jspecify.annotations.NonNull;
@@ -45,14 +44,18 @@ public class WebhookCredentialsProvider extends CredentialsProvider {
     /**
      * Cache of CredentialsStore instances per ModelObject context.
      */
-    private final Map<ModelObject, WebhookCredentialsStore> lazyStoreCache = new HashMap<>();
+    private WebhookCredentialsStore store;
 
     @Override
-    public CredentialsStore getStore(ModelObject object) {
-        if (object == null) {
-            object = Jenkins.get();
+    public synchronized CredentialsStore getStore(ModelObject object) {
+        if (store == null) {
+            store = new WebhookCredentialsStore(this, Jenkins.get());
         }
-        return lazyStoreCache.computeIfAbsent(object, this::createStore);
+        return store;
+    }
+
+    private CredentialsStore getStore() {
+        return getStore(Jenkins.get());
     }
 
     @Override
@@ -72,10 +75,6 @@ public class WebhookCredentialsProvider extends CredentialsProvider {
         return list;
     }
 
-    private WebhookCredentialsStore createStore(ModelObject object) {
-        return new WebhookCredentialsStore(this, object);
-    }
-
     /**
      * Add or update a credential from a webhook payload.
      *
@@ -87,6 +86,14 @@ public class WebhookCredentialsProvider extends CredentialsProvider {
         IdCredentials credential = WebhookToCredentialConverter.convertFromPayload(payload);
         String credentialId = payload.getId();
         credentials.put(credentialId, credential);
+        LOG.trace("Added/Updated credential with ID: {}", credentialId);
+        saveStore(getStore());
+        LOG.trace("Successfully added/updated credential with ID: {}", credentialId);
+    }
+
+    void setCredentials(List<IdCredentials> creds) {
+        credentials.clear();
+        creds.forEach(cred -> credentials.put(cred.getId(), cred));
     }
 
     /**
@@ -114,5 +121,19 @@ public class WebhookCredentialsProvider extends CredentialsProvider {
     @Override
     public String getIconClassName() {
         return "symbol-webhook plugin-webhook-secret-credentials-provider";
+    }
+
+    /**
+     * Save the credentials store to persist changes.
+     * @param store the credentials store to save
+     */
+    private void saveStore(CredentialsStore store) {
+        try {
+            store.save();
+            LOG.debug("Saved credentials for store  {}", store.getDisplayName());
+        } catch (IOException e) {
+            LOG.error("Failed to save credentials store for {}: {}", store.getDisplayName(), e.getMessage(), e);
+            throw new RuntimeException("Failed to save credentials store: " + e.getMessage(), e);
+        }
     }
 }
