@@ -46,12 +46,19 @@ public class WebhookCredentialsProvider extends CredentialsProvider {
      */
     private WebhookCredentialsStore store;
 
+    /**
+     * Lock guarding lazy initialization of {@link #store}.
+     */
+    private final Object storeLock = new Object();
+
     @Override
-    public synchronized CredentialsStore getStore(ModelObject object) {
-        if (store == null) {
-            store = new WebhookCredentialsStore(this, Jenkins.get());
+    public CredentialsStore getStore(ModelObject object) {
+        synchronized (storeLock) {
+            if (store == null) {
+                store = new WebhookCredentialsStore(this, Jenkins.get());
+            }
+            return store;
         }
-        return store;
     }
 
     private CredentialsStore getStore() {
