@@ -4,6 +4,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.util.Secret;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.GlobalConfigurationCategory;
 import net.sf.json.JSONObject;
@@ -79,7 +81,8 @@ public class WebhookConfiguration extends GlobalConfiguration {
         }
 
         String configuredToken = Secret.toString(token);
-        return configuredToken.equals(providedToken);
+        return MessageDigest.isEqual(
+                configuredToken.getBytes(StandardCharsets.UTF_8), providedToken.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
